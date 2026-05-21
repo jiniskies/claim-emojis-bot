@@ -1,0 +1,18 @@
+{
+  "name": "claim-emojis-bot",
+  "version": "1.0.0",
+  "description": "Discord bot that lets server members claim a unique emoji, with a persistent pink pastel embed board.",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  }
+}
