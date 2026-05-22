@@ -47,7 +47,10 @@ if (emojiTaken) {
   }
 
   save(entries);
-  return true;
+  return {
+  success: true,
+  owner: existingUser?.username || username
+};
 }
 
 export function clear() {
