@@ -24,16 +24,27 @@ export function getAll() {
 
 export function add(username, emoji) {
   const entries = load();
-  const existing = entries.find(
+
+  const existingUser = entries.find(
     (e) => e.username.toLowerCase() === username.toLowerCase()
   );
-  if (existing) {
-    existing.emoji = emoji;
+
+  const emojiTaken = entries.find(
+    (e) => e.emoji === emoji && e.username.toLowerCase() !== username.toLowerCase()
+  );
+
+  if (emojiTaken) {
+    return false;
+  }
+
+  if (existingUser) {
+    existingUser.emoji = emoji;
   } else {
     entries.push({ username, emoji });
   }
+
   save(entries);
-  return !existing;
+  return true;
 }
 
 export function clear() {
