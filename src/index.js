@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import fs from "fs";
 import { Client, GatewayIntentBits, Events, EmbedBuilder } from "discord.js";
 import { getAll, add, remove, clear } from "./store.js";
 
@@ -25,6 +26,21 @@ app.listen(PORT, "0.0.0.0", () => {
 
 const PREFIX = "!";
 const PINK = 0xf4b8c8;
+const BOARD_FILE = "./board.json";
+
+function loadBoard() {
+  if (!fs.existsSync(BOARD_FILE)) return null;
+
+  try {
+    return JSON.parse(fs.readFileSync(BOARD_FILE, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+function saveBoard(data) {
+  fs.writeFileSync(BOARD_FILE, JSON.stringify(data, null, 2));
+}
 
 const client = new Client({
   intents: [
@@ -57,28 +73,49 @@ function buildBoardEmbed() {
 }
 
 async function updateBoard() {
-  const channelId = process.env.CHANNEL_ID;
-  const messageId = process.env.MESSAGE_ID;
-  if (!channelId || !messageId) return;
+  const board = loadBoard();
+
+  if (!board?.channelId) {
+    console.log("❌ No board saved. Run !setupboard first.");
+    return;
+  }
 
   try {
-    const channel = await client.channels.fetch(channelId);
-    if (!channel) return;
-    const msg = await channel.messages.fetch(messageId);
-    if (!msg) return;
+    const channel = await client.channels.fetch(board.channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    let msg;
+
+    try {
+      msg = await channel.messages.fetch(board.messageId);
+    } catch {
+      console.log("⚠️ Board message missing — recreating...");
+
+      msg = await channel.send({ embeds: [buildBoardEmbed()] });
+
+      saveBoard({
+        channelId: channel.id,
+        messageId: msg.id,
+      });
+
+      return;
+    }
+
     await msg.edit({ embeds: [buildBoardEmbed()] });
     console.log("📋 Board updated.");
   } catch (err) {
-    console.error("⚠️  Could not update board message:", err.message);
+    console.error("❌ updateBoard failed:", err);
   }
 }
-
 client.once(Events.ClientReady, (c) => {
   console.log(`✅ Discord bot logged in as ${c.user.tag}`);
-  if (process.env.CHANNEL_ID && process.env.MESSAGE_ID) {
-    console.log("📋 Board message configured — will auto-update on changes.");
+
+  const board = loadBoard();
+
+  if (board?.channelId && board?.messageId) {
+    console.log("📋 Board loaded — auto-updating enabled.");
   } else {
-    console.log("ℹ️  No board configured. Use !setupboard in a channel to set one up.");
+    console.log("ℹ️ No board found. Run !setupboard to create one.");
   }
 });
 
@@ -160,19 +197,30 @@ client.on(Events.MessageCreate, async (message) => {
     await updateBoard();
     await message.reply("🗑️ Board has been reset — all entries cleared.");
 
-  } else if (command === "setupboard") {
-    try {
-      const boardMsg = await message.channel.send({ embeds: [buildBoardEmbed()] });
-      await message.reply(
-        "🌸 **Board created!**\n\n" +
-        "Save these as secrets in your Replit project, then restart the bot:\n" +
-        `\`CHANNEL_ID\` → \`${message.channel.id}\`\n` +
-        `\`MESSAGE_ID\` → \`${boardMsg.id}\``
-      );
-      console.log(`📋 Board setup — CHANNEL_ID=${message.channel.id} MESSAGE_ID=${boardMsg.id}`);
-    } catch (err) {
-      message.reply("❌ Failed to create board message: " + err.message);
-    }
+
+} else if (command === "setupboard") {
+  try {
+    const boardMsg = await message.channel.send({
+      embeds: [buildBoardEmbed()],
+    });
+
+    saveBoard({
+      channelId: message.channel.id,
+      messageId: boardMsg.id,
+    });
+
+    await message.reply(
+      "🌸 **Board created and saved!**\n\n" +
+      "This bot will now auto-update this embed forever (even after restarts)."
+    );
+
+    console.log(
+      `📋 Board saved — CHANNEL_ID=${message.channel.id} MESSAGE_ID=${boardMsg.id}`
+    );
+  } catch (err) {
+    message.reply("❌ Failed to create board message: " + err.message);
+  }
+
 
   } else if (command === "help") {
     message.reply([
