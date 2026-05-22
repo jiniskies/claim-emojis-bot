@@ -30,12 +30,15 @@ export function add(username, emoji) {
   );
 
   const emojiTaken = entries.find(
-    (e) => e.emoji === emoji && e.username.toLowerCase() !== username.toLowerCase()
-  );
+  (e) => e.emoji === emoji && e.username.toLowerCase() !== username.toLowerCase()
+);
 
-  if (emojiTaken) {
-    return false;
-  }
+if (emojiTaken) {
+  return {
+    success: false,
+    owner: emojiTaken.username
+  };
+}
 
   if (existingUser) {
     existingUser.emoji = emoji;
