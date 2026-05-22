@@ -143,10 +143,12 @@ client.on(Events.MessageCreate, async (message) => {
     }
     const emoji = args[0];
     const displayName = message.member?.displayName ?? message.author.username;
-    const success = add(displayName, emoji);
+    const result = add(displayName, emoji);
 
-if (!success) {
-  return message.reply("❌ That emoji is already taken by someone else. Please choose a different one!");
+if (!result.success) {
+  return message.reply(
+    `❌ That emoji is already taken by **${result.owner}**`
+  );
 }
 
 await message.reply(
@@ -156,21 +158,24 @@ await message.reply(
 await updateBoard();
 
   } else if (command === "add") {
-    if (args.length < 2) {
-      return message.reply("Usage: `!add <username> <emoji>`\nExample: `!add Alice 🎉`");
-    }
-    const [username, emoji] = args;
-    const success = add(username, emoji);
+  if (args.length < 2) {
+    return message.reply("Usage: `!add <username> <emoji>`\nExample: `!add Alice 🎉`");
+  }
 
-if (!success) {
-  return message.reply("❌ That emoji is already taken. Please choose another one!");
-}
+  const [username, emoji] = args;
+  const result = add(username, emoji);
 
-await message.reply(
-  `Added/updated **${username}** with ${emoji}!`
-);
+  if (!result.success) {
+    return message.reply(
+      `❌ That emoji is already taken by **${result.owner}**`
+    );
+  }
 
-await updateBoard();
+  await message.reply(
+    `Added/updated **${username}** with ${emoji}!`
+  );
+
+  await updateBoard();
 
   } else if (command === "remove") {
     if (args.length < 1) return message.reply("Usage: `!remove <username>`");
